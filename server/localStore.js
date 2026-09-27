@@ -30,6 +30,24 @@ export function findUserById(id) {
   return users.find((user) => Number(user.id) === Number(id)) ?? null
 }
 
+export function updateUserPassword(id, passwordHash) {
+  const user = findUserById(id)
+  if (user) user.password_hash = passwordHash
+  return user
+}
+
+export function updateUserProfile({ userId, name, email }) {
+  const user = findUserById(userId)
+  if (!user) return null
+  user.name = String(name || '').trim() || user.name
+  user.email = String(email || '').trim().toLowerCase()
+  return user
+}
+
+export function listPlaintextUsers() {
+  return users.filter((user) => user.password_hash && !user.password_hash.startsWith('$2'))
+}
+
 export function listCampaigns(userId) {
   return campaigns.filter((campaign) => Number(campaign.user_id) === Number(userId))
 }

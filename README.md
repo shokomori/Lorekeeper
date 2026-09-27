@@ -1,10 +1,11 @@
-# Your Project Name
+# Lorekeeper
 
 > **Replace this whole file.** It is a worked example of the README your project
 > will be graded from, not a file to leave as it is. Start with
 > [START-HERE.md](START-HERE.md).
 
-One sentence saying what this does and who it is for.
+Lorekeeper is a React/Vite and Express/PostgreSQL campaign journal for tabletop
+RPG Dungeon Masters.
 
 **Live site:** https://yourusername.github.io/your-repo-name/
 **API:** https://your-api.onrender.com/healthz
@@ -18,14 +19,17 @@ One sentence saying what this does and who it is for.
 
 ## What it does
 
-- Report a sighting with a place, a description and a spookiness rating
-- Browse everything reported, newest first
-- Delete a report
+- Register and sign in with a bcrypt-protected password
+- Manage campaigns, NPCs, locations, and session notes
+- Access campaign data only through authenticated, owner-scoped API routes
 
 ## Built with
 
-React and Vite on the front end, Express and PostgreSQL on the back end. The
-client is on GitHub Pages, the API on (host), the database on (host).
+React and Vite run the front end; Express and PostgreSQL run the API and data
+store.
+
+Session relationships, RPG compendium search, and AI-assisted summaries are
+planned and are not implemented yet.
 
 ## Demo mode
 
@@ -90,7 +94,7 @@ Check the API on its own before you blame the client:
 
     curl http://localhost:3000/healthz     # is the process alive
     curl http://localhost:3000/readyz      # is the database reachable
-    curl http://localhost:3000/api/sightings
+    curl http://localhost:3000/api/campaigns
 
 ## Environment variables
 

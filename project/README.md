@@ -4,27 +4,23 @@
 
 **Project type:** DM campaign management app
 
-Lorekeeper is a mobile-friendly campaign companion for tabletop RPG Dungeon Masters. It helps users manage campaigns, NPCs, locations, sessions, and campaign notes while also integrating external RPG reference data and AI-assisted session summaries.
+Lorekeeper is a responsive web campaign companion for tabletop RPG Dungeon Masters. It currently helps authenticated users manage campaigns, NPCs, locations, and session notes.
 
 ## Core goal
 
 Create a full-stack app that demonstrates:
 
-- React Native mobile frontend
+- React/Vite web frontend
 - Express REST API
 - PostgreSQL database
-- External API integration
-- Google authentication
-- AI-assisted session tools
+- Email/password authentication
 
 ## Planned stack
 
-- Frontend: React Native
+- Frontend: React + Vite
 - API: Node.js / Express
 - Database: PostgreSQL
 - Auth: Email/password + Google OAuth
-- External data: D&D/Open5e-style RPG API
-- AI: OpenAI-compatible API
 
 ## Main features
 
@@ -32,10 +28,13 @@ Create a full-stack app that demonstrates:
 - NPC management
 - Location management
 - Session journaling
-- Session-to-NPC and Session-to-location relationships
+## Planned features
+
+- Session-to-NPC and session-to-location relationship management
 - RPG compendium search
-- AI session summary assistant
+- AI session summary assistant with a review step
 
 ## Status
 
-This folder is the project working area for planning and documentation.
+The core campaign management workflow is implemented. The planned integrations
+above are intentionally not represented as completed features.

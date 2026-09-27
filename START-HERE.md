@@ -45,8 +45,8 @@ cp .env.example .env
 npm run dev
 ```
 
-Open http://localhost:5173. Add a sighting, reload, see it persist. That data is
-in your browser's `localStorage`, nowhere else.
+Open http://localhost:5173. Register, create a campaign, and add a session.
+With the real API configured, that data is stored in PostgreSQL.
 
 ### 3. Deploy it, today
 
@@ -86,9 +86,8 @@ the day the repository exists.
 
 ### Week one to two: make the interface yours
 
-Work entirely in `client/`, in demo mode. Change `src/api/mockApi.js` and
-`src/api/seed.json` to hold your data rather than ghost sightings, and rebuild
-`App.jsx` into your actual screens.
+Work in `client/` to refine the Lorekeeper screens and API client. The real
+workflow uses the Express API and PostgreSQL.
 
 **Keep the shape of `src/api/`.** One interface, two implementations, chosen by a
 variable. It is what makes the switch to your real API a one-line change instead
@@ -111,7 +110,7 @@ npm run dev
 curl http://localhost:3000/readyz
 ```
 
-Edit `db/schema.sql` to be your schema, and `sightingsRepo.js` to be your
+Use `db/lorekeeper-schema.sql` for the schema and `lorekeeperRepo.js` for your
 queries. Keep every query parameterised.
 
 ### Week three to four: get all three online

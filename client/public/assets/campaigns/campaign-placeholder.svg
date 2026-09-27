@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-label="Atmospheric fantasy campaign placeholder">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111323"/>
+      <stop offset=".55" stop-color="#283b57"/>
+      <stop offset="1" stop-color="#0a0c18"/>
+    </linearGradient>
+    <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9da9c7" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#0b0d18" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" fill="url(#sky)"/>
+  <circle cx="880" cy="125" r="72" fill="#d9dfd0" opacity=".62"/>
+  <path d="M0 405 170 260l115 92 155-180 155 148 142-216 120 130 143-74v360H0Z" fill="#101525"/>
+  <path d="M0 440 170 310l122 78 163-139 143 125 145-196 116 116 150-80 91 83v223H0Z" fill="#080b15" opacity=".94"/>
+  <path d="M800 350V190l28-30 28 30v160m-42-125h28m-28 43h28m-28 43h28M785 350h90" stroke="#cbd3d4" stroke-width="8" fill="none" opacity=".66"/>
+  <path d="M0 360c210-54 290 43 500-8s310-70 700 2v166H0Z" fill="url(#mist)"/>
+</svg>
