@@ -226,6 +226,25 @@ function AppReal() {
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
   const [dataLoading, setDataLoading] = useState(false)
+  const [settings, setSettings] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('lorekeeper:settings') || '{}')
+      return {
+        nightMode: saved.nightMode ?? true,
+        compactCards: saved.compactCards ?? false,
+        quickSessionNotes: saved.quickSessionNotes ?? true,
+      }
+    } catch {
+      localStorage.removeItem('lorekeeper:settings')
+      return { nightMode: true, compactCards: false, quickSessionNotes: true }
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('lorekeeper:settings', JSON.stringify(settings))
+    document.body.dataset.theme = settings.nightMode ? 'night' : 'light'
+    document.body.classList.toggle('compact-mode', settings.compactCards)
+  }, [settings])
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -388,7 +407,7 @@ function AppReal() {
   const items = data[view] || []
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${settings.nightMode ? 'theme-night' : 'theme-light'} ${settings.compactCards ? 'compact-mode' : ''}`}>
       <Particles />
       <aside className="sidebar">
         <Logo />
@@ -407,13 +426,13 @@ function AppReal() {
         </div>
         <div className="nav-label">WORLD ATLAS</div>
         {views.map(([key, icon, label]) => (
-          <button key={key} className={`nav-item ${view === key ? 'active' : ''}`} onClick={() => setView(key)} type="button">
+          <button key={key} className={`nav-item ${view === key ? 'active' : ''}`} aria-current={view === key ? 'page' : undefined} onClick={() => { setCampaignMenuOpen(false); setView(key) }} type="button">
             <span>{icon}</span>{label}
           </button>
         ))}
         <div className="sidebar-foot">
-          <button className={`nav-item ${view === 'profile' ? 'active' : ''}`} onClick={() => setView('profile')} type="button"><span>⚙</span>Profile</button>
-          <button className="user-chip" onClick={() => setView('profile')} type="button"><span className="avatar">{(user.name || 'U').slice(0, 2).toUpperCase()}</span>{user.name}</button>
+          <button className={`nav-item ${view === 'profile' ? 'active' : ''}`} aria-current={view === 'profile' ? 'page' : undefined} onClick={() => { setCampaignMenuOpen(false); setView('profile') }} type="button"><span>⚙</span>Profile</button>
+          <button className="user-chip" onClick={() => { setCampaignMenuOpen(false); setView('profile') }} type="button"><span className="avatar">{(user.name || 'U').slice(0, 2).toUpperCase()}</span>{user.name}</button>
         </div>
       </aside>
 
@@ -459,15 +478,22 @@ function AppReal() {
           {error && <div className="error-message">{error}</div>}
           {notice && <div className="success-message" role="status">{notice}</div>}
           {view === 'profile' ? (
-            <SettingsView user={user} onUserUpdated={updateAuthenticatedUser} onSignOut={signOut} />
+            <SettingsView user={user} onUserUpdated={updateAuthenticatedUser} onSignOut={signOut} settings={settings} onToggleSetting={(key) => setSettings((current) => ({ ...current, [key]: !current[key] }))} />
           ) : view === 'create-campaign' ? (
             <CampaignCreation onCreated={(created) => { setCampaigns((current) => [created, ...current]); setCampaign(created); localStorage.setItem('lorekeeper:campaign-id', String(created.id)); setView('dashboard'); setNotice('Campaign saved successfully.') }} onCancel={() => setView(campaign ? 'dashboard' : 'dashboard')} />
-          ) : !campaign ? (
+          ) : !campaign && view === 'dashboard' ? (
             <EmptyCampaign onCreated={(created) => { setCampaigns((current) => [created, ...current]); setCampaign(created); localStorage.setItem('lorekeeper:campaign-id', String(created.id)); setNotice('Campaign saved successfully.') }} />
+          ) : !campaign ? (
+            <div className="empty-workspace">
+              <div className="eyebrow">Campaign required</div>
+              <h1>{title} live inside a campaign</h1>
+              <p>Create a campaign first, then keep its {title === 'NPCs' ? 'NPCs' : title.toLowerCase()} together here.</p>
+              <button className="btn primary" type="button" onClick={startCampaignCreation}>Create campaign</button>
+            </div>
           ) : dataLoading ? (
             <div className="loading-state">Opening the campaign chronicle...</div>
           ) : view === 'dashboard' ? (
-            <Dashboard campaign={campaign} stats={stats} sessions={data.sessions} onNavigate={setView} onNew={(type) => { setEditingItem(null); setModal(type) }} />
+            <Dashboard campaign={campaign} stats={stats} sessions={data.sessions} onNavigate={setView} onNew={(type) => { setEditingItem(null); setModal(type) }} quickSessionNotes={settings.quickSessionNotes} />
           ) : (
             <EntityView type={view} items={items} onEdit={(item) => { setEditingItem(item); setModal(view === 'npcs' ? 'npc' : view === 'locations' ? 'location' : 'session') }} onDelete={(item) => removeEntity(view, item)} />
           )}
@@ -479,7 +505,7 @@ function AppReal() {
   )
 }
 
-function SettingsView({ user, onUserUpdated, onSignOut }) {
+function SettingsView({ user, onUserUpdated, onSignOut, settings, onToggleSetting }) {
   const [panel, setPanel] = useState('account')
   const [profile, setProfile] = useState({ name: user?.name || '', email: user?.email || '' })
   const [profileError, setProfileError] = useState('')
@@ -580,9 +606,9 @@ function SettingsView({ user, onUserUpdated, onSignOut }) {
           <div className="card settings-card">
             <h3>Settings</h3>
             <p className="desc">Keep the campaign dashboard tailored to your play style.</p>
-            <div className="toggle-row"><div><div className="t-label">Night mode</div><div className="t-desc">Always keep the app in the vault-toned theme.</div></div><button className="switch on" type="button" aria-label="Toggle night mode" /></div>
-            <div className="toggle-row"><div><div className="t-label">Compact cards</div><div className="t-desc">Tighten spacing across journals and records.</div></div><button className="switch" type="button" aria-label="Toggle compact cards" /></div>
-            <div className="toggle-row"><div><div className="t-label">Quick session notes</div><div className="t-desc">Keep recent session summaries pinned to the dashboard.</div></div><button className="switch on" type="button" aria-label="Toggle quick session notes" /></div>
+            <div className="toggle-row"><div><div className="t-label">Night mode</div><div className="t-desc">Always keep the app in the vault-toned theme.</div></div><button className={`switch ${settings.nightMode ? 'on' : ''}`} type="button" aria-label="Toggle night mode" onClick={() => onToggleSetting('nightMode')} /></div>
+            <div className="toggle-row"><div><div className="t-label">Compact cards</div><div className="t-desc">Tighten spacing across journals and records.</div></div><button className={`switch ${settings.compactCards ? 'on' : ''}`} type="button" aria-label="Toggle compact cards" onClick={() => onToggleSetting('compactCards')} /></div>
+            <div className="toggle-row"><div><div className="t-label">Quick session notes</div><div className="t-desc">Keep recent session summaries pinned to the dashboard.</div></div><button className={`switch ${settings.quickSessionNotes ? 'on' : ''}`} type="button" aria-label="Toggle quick session notes" onClick={() => onToggleSetting('quickSessionNotes')} /></div>
           </div>
         )}
 
@@ -677,7 +703,7 @@ function EmptyCampaign({ onCreated }) {
   )
 }
 
-function Dashboard({ campaign, stats, sessions, onNavigate, onNew }) {
+function Dashboard({ campaign, stats, sessions, onNavigate, onNew, quickSessionNotes = true }) {
   const latestSession = sessions[0]
 
   return (
@@ -701,10 +727,12 @@ function Dashboard({ campaign, stats, sessions, onNavigate, onNew }) {
           <button type="button" onClick={() => onNew('session')}><span className="quick-icon">✎</span>New session<span className="quick-arrow">›</span></button>
           <button type="button" onClick={() => onNew('npc')}><span className="quick-icon">♙</span>New NPC<span className="quick-arrow">›</span></button>
           <button type="button" onClick={() => onNew('location')}><span className="quick-icon">⌂</span>New location<span className="quick-arrow">›</span></button>
-          <div className="activity-block">
-            <div className="panel-heading"><span>Recent activity</span><span className="panel-rule" /></div>
-            {latestSession ? <button type="button" onClick={() => onNavigate('sessions')}><span className="activity-dot">✎</span><span><strong>{latestSession.title}</strong><small>Updated {latestSession.date}</small></span><span className="quick-arrow">›</span></button> : <p className="muted">Your campaign activity will appear here.</p>}
-          </div>
+          {quickSessionNotes && (
+            <div className="activity-block">
+              <div className="panel-heading"><span>Recent activity</span><span className="panel-rule" /></div>
+              {latestSession ? <button type="button" onClick={() => onNavigate('sessions')}><span className="activity-dot">✎</span><span><strong>{latestSession.title}</strong><small>Updated {latestSession.date}</small></span><span className="quick-arrow">›</span></button> : <p className="muted">Your campaign activity will appear here.</p>}
+            </div>
+          )}
         </aside>
       </div>
 

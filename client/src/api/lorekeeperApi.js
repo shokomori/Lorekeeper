@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+const BASE = import.meta.env.VITE_API_BASE_URL || ''
 const TOKEN_KEY = 'lorekeeper:token'
 
 function normalizeApiError(error, fallbackMessage) {

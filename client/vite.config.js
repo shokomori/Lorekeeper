@@ -47,7 +47,7 @@ export default defineConfig({
     // Only used by `npm run dev`. It is NOT part of the production build, which
     // is why the deployed site needs CORS and this does not. See page 8.
     proxy: {
-      '/api': 'http://localhost:4055',
+      '/api': 'http://localhost:3000',
     },
   },
 })
