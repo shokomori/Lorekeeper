@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { createWallpaperRotation, getWallpaperAssignments } from './utils/wallpaperRotation.js'
 import {
   changePassword,
   createCampaign,
@@ -24,10 +25,41 @@ import {
   updateSession,
 } from './api/lorekeeperApi.js'
 
+const wallpaperModules = import.meta.glob('../../project/wallpapers/*.{jpg,jpeg,png,webp,avif,gif,bmp,tif,tiff,JPG,JPEG,PNG,WEBP,AVIF,GIF,BMP,TIF,TIFF}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
+const wallpaperAssets = Object.fromEntries(Object.entries(wallpaperModules).map(([path, url]) => [path.split('/').pop(), url]))
+const wallpaperIds = Object.keys(wallpaperAssets)
+const landingWallpaperSlots = ['hero', 'campaigns', 'campaignPreview', 'people', 'places', 'journal', 'finale']
+
+function getNextWallpaper() {
+  if (!wallpaperIds.length) return ''
+  const id = createWallpaperRotation(wallpaperIds).next()
+  return wallpaperAssets[id]
+}
+
+function getStoredWallpaper(key) {
+  const saved = localStorage.getItem(key)
+  if (saved && wallpaperAssets[saved]) return wallpaperAssets[saved]
+
+  if (!wallpaperIds.length) return ''
+  const id = createWallpaperRotation(wallpaperIds).next()
+  localStorage.setItem(key, id)
+  return wallpaperAssets[id]
+}
+
+function getExistingWallpaper(key) {
+  const saved = localStorage.getItem(key)
+  return saved && wallpaperAssets[saved] ? wallpaperAssets[saved] : ''
+}
+
 function Logo({ compact = false }) {
   return (
     <div className={`logo ${compact ? 'logo-compact' : ''}`} aria-label="Lorekeeper">
-      <img src="/lorekeeper-logo.png" alt="" />
+      <img className="logo-horizontal" src="/assets/lorekeeper-logo-horizontal.png" alt="Lorekeeper" />
+      <img className="logo-vertical" src="/assets/lorekeeper-logo-vertical.png" alt="Lorekeeper" />
     </div>
   )
 }
@@ -146,8 +178,8 @@ function FormModal({ type, item, onClose, onSubmit, loading }) {
   )
 }
 
-function Auth({ onAuthenticated }) {
-  const [mode, setMode] = useState('login')
+function Auth({ onAuthenticated, initialMode = 'login', onBack, wallpaper }) {
+  const [mode, setMode] = useState(initialMode)
   const [form, setForm] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -175,7 +207,8 @@ function Auth({ onAuthenticated }) {
   return (
     <>
       <Particles />
-      <main className="auth-screen" data-mode={mode}>
+      <main className="auth-screen" data-mode={mode} style={{ '--auth-wallpaper': `url("${wallpaper}")` }}>
+        <button className="auth-back" type="button" onClick={onBack}>Back to Lorekeeper</button>
         <form className="login-card" onSubmit={submit}>
         <div className="auth-brand"><Logo /></div>
         <div className="auth-kicker">The living archive</div>
@@ -213,8 +246,134 @@ function Auth({ onAuthenticated }) {
   )
 }
 
+function LandingPage({ onBegin, onSignIn }) {
+  const [assignedWallpaperIds] = useState(() => getWallpaperAssignments(localStorage, wallpaperIds, landingWallpaperSlots))
+  const assignedWallpapers = Object.fromEntries(landingWallpaperSlots.map((slot) => [slot, wallpaperAssets[assignedWallpaperIds[slot]] || '']))
+
+  useEffect(() => {
+    const sections = document.querySelectorAll('.landing-reveal')
+    if (!('IntersectionObserver' in window)) {
+      sections.forEach((section) => section.classList.add('is-visible'))
+      return undefined
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-visible')
+          observer.unobserve(entry.target)
+        }
+      })
+    }, { threshold: 0.16 })
+
+    sections.forEach((section) => observer.observe(section))
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <main className="landing-page">
+      <header className="landing-nav">
+        <a className="landing-brand" href="#home" aria-label="Lorekeeper home"><Logo /></a>
+        <button className="landing-signin" type="button" onClick={() => onSignIn('login')}>Sign in <span aria-hidden="true">↗</span></button>
+      </header>
+
+      <section className="landing-hero" id="home" aria-labelledby="landing-title">
+        <div className="landing-hero-art" style={{ '--landing-wallpaper': `url("${assignedWallpapers.hero}")` }} aria-hidden="true" />
+        <div className="landing-hero-content">
+          <div className="landing-eyebrow"><span /> THE LIVING ARCHIVE</div>
+          <h1 id="landing-title">Lorekeeper</h1>
+          <p className="landing-tagline">Your world. Your stories. Your legacy.</p>
+          <p className="landing-intro">A campaign workspace for the people, places, and sessions that make your world yours.</p>
+          <div className="landing-actions">
+            <button className="landing-cta" type="button" onClick={() => onBegin('register')}>Begin your campaign <span aria-hidden="true">↗</span></button>
+            <a className="landing-explore" href="#campaigns">Explore Lorekeeper <span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+        <a className="landing-scroll-cue" href="#campaigns"><span /> SCROLL TO EXPLORE</a>
+        <div className="landing-edition">A FIELD GUIDE FOR YOUR NEXT CAMPAIGN</div>
+      </section>
+
+      <section className="landing-section landing-campaigns landing-reveal" id="campaigns" aria-labelledby="campaigns-title">
+        <div className="landing-section-art" style={{ '--landing-wallpaper': `url("${assignedWallpapers.campaigns}")` }} aria-hidden="true" />
+        <div className="landing-copy">
+          <div className="landing-eyebrow">01 / WORLDS</div>
+          <h2 id="campaigns-title">Every great story starts with a world.</h2>
+          <p>Keep every campaign in its own chronicle. Give the setting a name, hold onto its history, and pick up the thread whenever your table returns.</p>
+          <button className="landing-text-cta" type="button" onClick={() => onBegin('register')}>Create your first campaign <span>↗</span></button>
+        </div>
+        <div className="campaign-preview" aria-label="Example campaign preview">
+          <div className="preview-topline"><span>CAMPAIGN ARCHIVE</span><span>EXAMPLE</span></div>
+          <div className="preview-campaign-art" style={{ '--landing-wallpaper': `url("${assignedWallpapers.campaignPreview}")` }} />
+          <div className="preview-campaign-copy">
+            <span className="preview-kicker">THE NORTH COAST / YEAR 1489</span>
+            <h3>The Ashen Reach</h3>
+            <p>A frontier of salt-worn keeps, old bargains, and roads that disappear into the pines.</p>
+          </div>
+          <div className="preview-stats"><div><strong>08</strong><span>PEOPLE</span></div><div><strong>12</strong><span>PLACES</span></div><div><strong>06</strong><span>SESSIONS</span></div></div>
+        </div>
+      </section>
+
+      <section className="landing-section landing-people landing-reveal" aria-labelledby="people-title">
+        <div className="landing-copy">
+          <div className="landing-eyebrow">02 / PEOPLE</div>
+          <h2 id="people-title">Remember every face.</h2>
+          <p>Keep names, roles, descriptions, and private notes close at hand. The small detail you record tonight can become tomorrow’s turning point.</p>
+        </div>
+        <div className="people-preview" style={{ '--landing-wallpaper': `url("${assignedWallpapers.people}")` }} aria-label="Example non-player character records">
+          <div className="people-preview-heading"><span>PEOPLE IN THE CHRONICLE</span><span>03 RECORDS</span></div>
+          <article className="person-entry"><span className="person-mark person-mark-amber">MV</span><div><h3>Mara Venn</h3><p>Harbor cartographer · Knows the drowned road</p></div><span className="entry-arrow">↗</span></article>
+          <article className="person-entry"><span className="person-mark person-mark-green">OT</span><div><h3>Orrin Thatch</h3><p>Keeper of the north gate · Owes the party a favor</p></div><span className="entry-arrow">↗</span></article>
+          <article className="person-entry"><span className="person-mark person-mark-red">SV</span><div><h3>Sister Vale</h3><p>Archivist · Searching for a page torn from the ledger</p></div><span className="entry-arrow">↗</span></article>
+          <div className="preview-footnote">EXAMPLE RECORDS · YOUR CAMPAIGN DATA STAYS YOURS</div>
+        </div>
+      </section>
+
+      <section className="landing-section landing-places landing-reveal" aria-labelledby="places-title">
+        <div className="places-image" style={{ '--landing-wallpaper': `url("${assignedWallpapers.places}")` }} role="img" aria-label="Fantasy landscape for a campaign location" />
+        <div className="landing-copy">
+          <div className="landing-eyebrow">03 / PLACES</div>
+          <h2 id="places-title">Know every corner of your world.</h2>
+          <p>Map the places your players return to and the ones they have yet to find. Leave yourself notes about what waits behind each door.</p>
+          <div className="place-note"><span className="place-coordinate">N 47° 08′ / E 12° 31′</span><strong>Greywake Crossing</strong><span>Last safe roof before the pine road.</span></div>
+        </div>
+      </section>
+
+      <section className="landing-section landing-journal landing-reveal" aria-labelledby="journal-title">
+        <div className="landing-copy">
+          <div className="landing-eyebrow">04 / JOURNAL</div>
+          <h2 id="journal-title">Every session becomes history.</h2>
+          <p>Capture the turning points while they are still fresh. Your session journal keeps the story moving between game nights.</p>
+        </div>
+        <article className="journal-preview" style={{ '--landing-wallpaper': `url("${assignedWallpapers.journal}")` }} aria-label="Example session journal entry">
+          <div className="journal-meta"><span>SESSION 06</span><span>27 SEPTEMBER 2026</span></div>
+          <h3>The Road Beneath the Roots</h3>
+          <p className="journal-lead">The party entered the forgotten vault beneath Greywake.</p>
+          <p>Three doors stood open where the old map showed a wall. From somewhere below, a bell rang once. Mara recognized the sound and would not explain why.</p>
+          <div className="journal-rule" />
+          <div className="journal-endnote"><span>RECORDED IN THE CAMPAIGN JOURNAL</span><span>06 — 12</span></div>
+        </article>
+      </section>
+
+      <section className="landing-finale landing-reveal" aria-labelledby="finale-title">
+        <div className="finale-art" style={{ '--landing-wallpaper': `url("${assignedWallpapers.finale}")` }} aria-hidden="true" />
+        <div className="finale-content">
+          <div className="landing-eyebrow">ONE WORLD. MANY THREADS.</div>
+          <h2 id="finale-title">Your world is waiting.</h2>
+          <p>Campaigns, characters, places, and sessions, held together in one living archive.</p>
+          <div className="finale-index"><span>WORLDS</span><i /> <span>PEOPLE</span><i /> <span>PLACES</span><i /> <span>SESSIONS</span></div>
+          <button className="landing-cta" type="button" onClick={() => onBegin('register')}>Begin your journey <span aria-hidden="true">↗</span></button>
+        </div>
+        <footer className="landing-footer"><a className="landing-brand" href="#home" aria-label="Lorekeeper home"><Logo /></a><span>A campaign archive for stories still unfolding.</span><button type="button" onClick={() => onSignIn('login')}>Sign in</button></footer>
+      </section>
+    </main>
+  )
+}
+
 function AppReal() {
   const [user, setUser] = useState(storedUser)
+  const [authWallpaper, setAuthWallpaper] = useState(() => getExistingWallpaper('lorekeeper:auth-wallpaper'))
+  const [entryScreen, setEntryScreen] = useState(() => localStorage.getItem('lorekeeper:intro-complete') ? 'auth' : 'landing')
+  const [authMode, setAuthMode] = useState('login')
   const [campaigns, setCampaigns] = useState([])
   const [campaign, setCampaign] = useState(null)
   const [campaignMenuOpen, setCampaignMenuOpen] = useState(false)
@@ -245,6 +404,12 @@ function AppReal() {
     document.body.dataset.theme = settings.nightMode ? 'night' : 'light'
     document.body.classList.toggle('compact-mode', settings.compactCards)
   }, [settings])
+
+  useEffect(() => {
+    if (!user && entryScreen === 'auth' && !authWallpaper) {
+      setAuthWallpaper(getStoredWallpaper('lorekeeper:auth-wallpaper'))
+    }
+  }, [authWallpaper, entryScreen, user])
 
   useEffect(() => {
     function handleKeyDown(event) {
@@ -401,7 +566,19 @@ function AppReal() {
   }
 
   const title = useMemo(() => view === 'create-campaign' ? 'Create campaign' : views.find(([key]) => key === view)?.[2] || 'Dashboard', [view])
-  if (!user) return <Auth onAuthenticated={authenticated} />
+  function enterAuth(mode) {
+    const nextWallpaper = getNextWallpaper()
+    if (nextWallpaper) {
+      const id = Object.keys(wallpaperAssets).find((wallpaperId) => wallpaperAssets[wallpaperId] === nextWallpaper)
+      if (id) localStorage.setItem('lorekeeper:auth-wallpaper', id)
+      setAuthWallpaper(nextWallpaper)
+    }
+    setAuthMode(mode)
+    localStorage.setItem('lorekeeper:intro-complete', 'true')
+    setEntryScreen('auth')
+  }
+  if (!user && entryScreen === 'landing') return <LandingPage onBegin={enterAuth} onSignIn={enterAuth} />
+  if (!user) return <Auth key={authMode} wallpaper={authWallpaper} initialMode={authMode} onBack={() => setEntryScreen('landing')} onAuthenticated={authenticated} />
 
   const stats = { npcs: data.npcs.length, locations: data.locations.length, sessions: data.sessions.length }
   const items = data[view] || []
@@ -410,7 +587,6 @@ function AppReal() {
     <div className={`app-shell ${settings.nightMode ? 'theme-night' : 'theme-light'} ${settings.compactCards ? 'compact-mode' : ''}`}>
       <Particles />
       <aside className="sidebar">
-        <Logo />
         <CampaignSwitcher campaigns={campaigns} campaign={campaign} open={campaignMenuOpen} onToggle={() => setCampaignMenuOpen((current) => !current)} onSelect={selectCampaign} onCreate={startCampaignCreation} onClose={() => setCampaignMenuOpen(false)} />
         <div className="campaign-caption sidebar-campaign-caption">{campaign?.description || 'A living archive for your world.'}</div>
         <div className="campaign-picker-actions">
@@ -454,9 +630,12 @@ function AppReal() {
         </header>
 
         <header className="topbar">
-          <div>
-            <h2>{view === 'profile' ? 'Profile' : title}</h2>
-            <div className="path">{view === 'profile' ? 'Account / Profile' : `Campaign / ${title}`}</div>
+          <div className="desktop-header-brand">
+            <Logo />
+            <div className="topbar-copy">
+              <h2>{view === 'profile' ? 'Profile' : title}</h2>
+              <div className="path">{view === 'profile' ? 'Account / Profile' : `Campaign / ${title}`}</div>
+            </div>
           </div>
           {campaign && view === 'dashboard' && (
             <div className="campaign-top-actions">
@@ -704,12 +883,13 @@ function EmptyCampaign({ onCreated }) {
 }
 
 function Dashboard({ campaign, stats, sessions, onNavigate, onNew, quickSessionNotes = true }) {
+  const [fallbackWallpaper] = useState(() => campaign.artwork ? '' : getStoredWallpaper('lorekeeper:dashboard-wallpaper'))
   const latestSession = sessions[0]
 
   return (
     <>
       <div className="dashboard-grid">
-        <div className="dash-hero flourish" style={{ '--campaign-art': campaign.artwork ? `url("/assets/campaigns/${campaign.artwork}")` : 'url("/assets/wallpapers/archive-gate.jpg")' }}>
+        <div className="dash-hero flourish" style={{ '--campaign-art': campaign.artwork ? `url("/assets/campaigns/${campaign.artwork}")` : `url("${fallbackWallpaper}")` }}>
           <div className="hero-copy">
             <div className="eyebrow">Campaign chronicle</div>
             <h1>{campaign.name}</h1>
