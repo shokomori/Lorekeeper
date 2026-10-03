@@ -1,178 +1,77 @@
 # Lorekeeper
 
-> **Replace this whole file.** It is a worked example of the README your project
-> will be graded from, not a file to leave as it is. Start with
-> [START-HERE.md](START-HERE.md).
+Lorekeeper is a campaign archive for tabletop role-playing games. Game masters
+can keep campaign details, characters, places, and session notes together in one
+workspace.
 
-Lorekeeper is a React/Vite and Express/PostgreSQL campaign journal for tabletop
-RPG Dungeon Masters.
+## Features
 
-**Live site:** https://yourusername.github.io/your-repo-name/
-**API:** https://your-api.onrender.com/healthz
-**Demo video:** (link)
+- Create an account, sign in, and manage a profile
+- Create and edit campaigns
+- Record non-player characters and locations for each campaign
+- Write and browse campaign session notes in the journal
+- Protect campaign records with authenticated, owner-scoped API routes
 
-> **This deployment is running in demo mode.** The interface is real; the backend
-> is simulated in your browser so the site works without a server. See
-> [Demo mode](#demo-mode) below. Delete this quote once your API is live.
+## Tech stack
 
-![A screenshot of the main screen](docs/assets/screenshot.png)
+- React 18 and Vite for the client
+- Express for the HTTP API
+- PostgreSQL for persistent storage
+- JWT authentication and bcrypt password hashing
 
-## What it does
+In development, the server falls back to an in-memory repository when
+PostgreSQL is unavailable. Data in this fallback is temporary and is lost when
+the server restarts. Production requires PostgreSQL.
 
-- Register and sign in with a bcrypt-protected password
-- Manage campaigns, NPCs, locations, and session notes
-- Access campaign data only through authenticated, owner-scoped API routes
+## Run locally
 
-## Built with
+Requires Node.js 20 or newer. Start the API and client in separate terminals.
 
-React and Vite run the front end; Express and PostgreSQL run the API and data
-store.
+Start the API:
 
-Session relationships, RPG compendium search, and AI-assisted summaries are
-planned and are not implemented yet.
+```sh
+cd server
+npm install
+npm start
+```
 
-## Demo mode
+The API listens on `http://localhost:3000`. Its health endpoint is
+`http://localhost:3000/healthz`. To use PostgreSQL, copy `server/.env.example` to
+`server/.env`, set `DATABASE_URL`, and run `npm run db:reset` from `server/` to
+create the schema and load the sample data.
 
-This repository can run two ways, chosen by one environment variable at **build**
-time.
+Start the client in another terminal:
 
-**Demo mode is the default.** Only the exact string `false` turns it off, so a
-forgotten or mistyped variable leaves you on the simulated backend with a visible
-notice rather than on a silently broken build.
+```sh
+cd client
+npm install
+npm run dev
+```
 
-| `VITE_USE_MOCK_API` | What happens |
-| --- | --- |
-| unset, or `true` | The client answers its own requests from `localStorage`. No server, no database, nothing shared between visitors. This is what the template ships with, so the GitHub Pages link works on day one. |
-| `false` | The client calls the Express API at `VITE_API_BASE_URL`, which reads and writes real PostgreSQL. |
+Open the local URL printed by Vite, usually `http://localhost:5173`. The Vite
+development server proxies `/api` requests to the API on port 3000.
 
-**Demo mode is a starting point and a fallback, not a finished project.** Your
-finals submission is all three pieces deployed and talking to each other. Demo
-mode is there so you can build the interface in week one before the API exists,
-and so you have something to show if a free tier is asleep during your demo.
+## Configuration
 
-GitHub Pages serves files and cannot run Node, so the API and the database can
-never live there. They go somewhere else:
+The server reads its environment from `server/.env`. `DATABASE_URL` configures
+PostgreSQL; `CORS_ORIGINS` optionally sets the allowed browser origins. Set
+`NODE_ENV=production` and provide a strong `JWT_SECRET` when running in
+production. The server's default JWT secret is for local development only.
 
-| Piece | Options |
-| --- | --- |
-| **API** | Render, Railway, Fly.io, Koyeb, a VPS, or [self-hosted behind a tunnel](../content/extending-your-app/11-self-hosting.md) |
-| **Database** | Neon, Supabase, Railway, Aiven, or your own PostgreSQL |
+For a deployed client, set `VITE_API_BASE_URL` to the public API URL when building
+the client, and configure `CORS_ORIGINS` on the API to allow the deployed site.
+Values prefixed with `VITE_` are included in the public client bundle and must
+never contain secrets.
 
-`content/extending-your-app/` in your course workspace walks through all of it.
-Page 10 is the decision page if you do not know which to pick.
+## Project layout
 
-## Running it yourself
+```text
+client/       React application and Vite configuration
+server/       Express API, repositories, and database schema
+docs/         Project proposal, design notes, and weekly reports
+project/      Mockup and local visual assets
+```
 
-**The client only, in demo mode.** No database needed.
+## License
 
-    cd client
-    npm install
-    cp .env.example .env        # VITE_USE_MOCK_API stays true
-    npm run dev                 # http://localhost:5173
-
-**The whole stack.** Needs a PostgreSQL, either local or hosted.
-
-    # 1. the database
-    docker run --name my-pg -e POSTGRES_PASSWORD=devpassword \
-      -e POSTGRES_DB=haunted -p 5432:5432 -d postgres:17
-
-    # 2. the API
-    cd server
-    npm install
-    cp .env.example .env        # check DATABASE_URL
-    npm run db:reset            # creates the tables and adds sample rows
-    npm run dev                 # http://localhost:3000
-
-    # 3. the client, in another terminal
-    cd client
-    npm install
-    cp .env.example .env
-    # set VITE_USE_MOCK_API=false
-    npm run dev
-
-Check the API on its own before you blame the client:
-
-    curl http://localhost:3000/healthz     # is the process alive
-    curl http://localhost:3000/readyz      # is the database reachable
-    curl http://localhost:3000/api/campaigns
-
-## Environment variables
-
-None of these are committed. `.env.example` in each folder lists them with
-placeholder values.
-
-| Name | Where | What it is |
-| --- | --- | --- |
-| `DATABASE_URL` | server | PostgreSQL connection string. Contains a password |
-| `CORS_ORIGINS` | server | comma-separated origins allowed to call the API |
-| `NODE_ENV` | server | `production` on your host |
-| `PORT` | server | **set by the host**, do not set it yourself |
-| `VITE_USE_MOCK_API` | client, at build time | only `false` turns demo mode off; unset means on |
-| `VITE_API_BASE_URL` | client, at build time | your API's public URL, no trailing slash |
-
-Every `VITE_` value is compiled into the built JavaScript and is **public**.
-Never put a key, a password or a connection string in one.
-
-## Deploying
-
-**Client, to GitHub Pages.** Already wired up in
-`.github/workflows/deploy-pages.yml`. Two one-time steps:
-
-1. **Settings > Pages > Build and deployment > Source: GitHub Actions.** Without
-   this the workflow goes green and publishes nothing.
-2. Nothing else, until your API is live. Demo mode is the default, so the first
-   deploy works on its own. When the API is up, add `VITE_USE_MOCK_API` = `false`
-   and `VITE_API_BASE_URL` under **Settings > Secrets and variables > Actions >
-   Variables**, then re-run the workflow.
-
-The repository must be **public** for Pages to serve it on a free account.
-
-**API and database.** Not automated here, because most hosts deploy straight from
-your repository with no workflow at all. Point your host at the `server/` folder,
-set the environment variables in its dashboard, and run `server/db/schema.sql`
-once against the hosted database.
-
-## Project structure
-
-    client/          React front end, built by Vite
-      src/api/       ONE interface, two implementations, chosen by a variable
-      src/components/
-    server/          Express API
-      db/            pool, schema.sql, seed.sql, and a runner for them
-    compose.yml      only if you self-host
-    docs/            your planning documents and weekly reports
-
-## Architecture
-
-Three or four sentences, or a small diagram. Which piece talks to which, and
-where each one is hosted.
-
-## What I would do next
-
-Three honest bullets. This paragraph is worth more than it looks.
-
-## Author
-
-Your name, and a link. Course and section.
-
-## AI use
-
-If you used AI while building this, say so here. Honest disclosure is the
-standard in this course and increasingly outside it, and reporting heavy use
-accurately costs you nothing.
-
-This section is the last 10 points of the finals badge, and it wants three
-things:
-
-![Built with AI assistance](https://img.shields.io/badge/built%20with-AI%20assistance-0b5fff)
-
-- the badge above, or one you like better
-- a line naming which assistant you used and how much of the work it touched
-- a link to [AI-USAGE.md](AI-USAGE.md), where the full account lives
-
-Keep the detail in `AI-USAGE.md` rather than here. This section is the summary a
-visitor reads; that file is the record the badge is graded from.
-
-## Licence
-
-MIT, see [LICENSE](LICENSE). Put your own name in it.
+See [LICENSE](LICENSE).
