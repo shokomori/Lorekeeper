@@ -30,7 +30,11 @@ const wallpaperModules = import.meta.glob('../../project/wallpapers/*.{jpg,jpeg,
   query: '?url',
   import: 'default',
 })
-const wallpaperAssets = Object.fromEntries(Object.entries(wallpaperModules).map(([path, url]) => [path.split('/').pop(), url]))
+const wallpaperAssets = Object.fromEntries(
+  Object.entries(wallpaperModules)
+    .map(([path, url]) => [path.split('/').pop(), url])
+    .filter(([name]) => !/^logo(?:[\s_.-]|$)/i.test(name))
+)
 const wallpaperIds = Object.keys(wallpaperAssets)
 const landingWallpaperSlots = ['hero', 'campaigns', 'campaignPreview', 'people', 'places', 'journal', 'finale']
 
@@ -180,18 +184,19 @@ function FormModal({ type, item, onClose, onSubmit, loading }) {
 
 function Auth({ onAuthenticated, initialMode = 'login', onBack, wallpaper }) {
   const [mode, setMode] = useState(initialMode)
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [form, setForm] = useState({ name: '', username: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const update = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
 
   async function submit(event) {
     event.preventDefault(); setError(''); setLoading(true)
     try {
-      const email = form.email.trim()
+      const identifier = form.email.trim()
       const password = form.password
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error('Please enter a valid email address.')
+      if (!identifier) {
+        throw new Error('Enter your email or username.')
       }
       if (!password || password.length < 8) {
         throw new Error('Password must be at least 8 characters long.')
@@ -199,7 +204,15 @@ function Auth({ onAuthenticated, initialMode = 'login', onBack, wallpaper }) {
       if (mode === 'register' && !form.name.trim()) {
         throw new Error('Name is required.')
       }
-      const result = mode === 'login' ? await login(email, password) : await register(form.name.trim(), email, password)
+      if (mode === 'register' && !/^[a-zA-Z0-9_]{3,24}$/.test(form.username.trim())) {
+        throw new Error('Username must be 3-24 characters using letters, numbers, or underscores.')
+      }
+      if (mode === 'register' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
+        throw new Error('Please enter a valid email address.')
+      }
+      const result = mode === 'login'
+        ? await login(identifier, password)
+        : await register(form.name.trim(), form.username.trim(), identifier, password)
       onAuthenticated(result.user)
     } catch (requestError) { setError(requestError.message) } finally { setLoading(false) }
   }
@@ -220,14 +233,23 @@ function Auth({ onAuthenticated, initialMode = 'login', onBack, wallpaper }) {
             <input required autoComplete="name" placeholder="Your name" value={form.name} onChange={update('name')} />
           </label>
         )}
+        {mode === 'register' && (
+          <label className="field">
+            Username
+            <input required autoComplete="username" minLength={3} maxLength={24} pattern="[a-zA-Z0-9_]+" placeholder="Your username" value={form.username} onChange={update('username')} />
+          </label>
+        )}
         <label className="field">
-          Email
-          <input required type="email" autoComplete="email" placeholder="you@example.com" value={form.email} onChange={update('email')} />
+          {mode === 'login' ? 'Email or username' : 'Email'}
+          <input required type={mode === 'login' ? 'text' : 'email'} autoComplete={mode === 'login' ? 'username' : 'email'} placeholder={mode === 'login' ? 'you@example.com or username' : 'you@example.com'} value={form.email} onChange={update('email')} />
         </label>
-        <label className="field">
-          Password
-          <input required type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="Enter your password" value={form.password} onChange={update('password')} />
-        </label>
+        <div className="field">
+          <label htmlFor="auth-password">Password</label>
+          <div className="password-input-wrap">
+            <input id="auth-password" required type={showPassword ? 'text' : 'password'} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="Enter your password" value={form.password} onChange={update('password')} />
+            <button className="password-visibility" type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? 'Hide' : 'Show'}</button>
+          </div>
+        </div>
         {error && <div className="error-message">{error}</div>}
         <button className="btn primary block auth-submit" disabled={loading} type="submit">{loading ? 'Opening...' : mode === 'login' ? 'Enter the Realm' : 'Create account'}</button>
         <button
@@ -372,6 +394,7 @@ function LandingPage({ onBegin, onSignIn }) {
 function AppReal() {
   const [user, setUser] = useState(storedUser)
   const [authWallpaper, setAuthWallpaper] = useState(() => getExistingWallpaper('lorekeeper:auth-wallpaper'))
+  const [appWallpaper, setAppWallpaper] = useState(() => getStoredWallpaper('lorekeeper:app-wallpaper'))
   const [entryScreen, setEntryScreen] = useState(() => localStorage.getItem('lorekeeper:intro-complete') ? 'auth' : 'landing')
   const [authMode, setAuthMode] = useState('login')
   const [campaigns, setCampaigns] = useState([])
@@ -455,6 +478,12 @@ function AppReal() {
     setNotice('')
     setData({ npcs: [], locations: [], sessions: [] })
     setCampaign(nextCampaign)
+    const nextWallpaper = getNextWallpaper()
+    if (nextWallpaper) {
+      const wallpaperId = Object.keys(wallpaperAssets).find((id) => wallpaperAssets[id] === nextWallpaper)
+      if (wallpaperId) localStorage.setItem('lorekeeper:app-wallpaper', wallpaperId)
+      setAppWallpaper(nextWallpaper)
+    }
     localStorage.setItem('lorekeeper:campaign-id', String(nextCampaign.id))
   }
 
@@ -584,7 +613,7 @@ function AppReal() {
   const items = data[view] || []
 
   return (
-    <div className={`app-shell ${settings.nightMode ? 'theme-night' : 'theme-light'} ${settings.compactCards ? 'compact-mode' : ''}`}>
+    <div className={`app-shell ${settings.nightMode ? 'theme-night' : 'theme-light'} ${settings.compactCards ? 'compact-mode' : ''}`} style={{ '--app-wallpaper': `url("${appWallpaper}")` }}>
       <Particles />
       <aside className="sidebar">
         <CampaignSwitcher campaigns={campaigns} campaign={campaign} open={campaignMenuOpen} onToggle={() => setCampaignMenuOpen((current) => !current)} onSelect={selectCampaign} onCreate={startCampaignCreation} onClose={() => setCampaignMenuOpen(false)} />

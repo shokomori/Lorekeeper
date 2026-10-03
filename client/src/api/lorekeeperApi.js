@@ -75,11 +75,11 @@ export const changePassword = (currentPassword, newPassword, confirmPassword) =>
     body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
   })
 
-export const login = (email, password) =>
-  request('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+export const login = (identifier, password) =>
+  request('/api/auth/login', { method: 'POST', body: JSON.stringify({ identifier, password }) })
 
-export const register = (name, email, password) =>
-  request('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) })
+export const register = (name, username, email, password) =>
+  request('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, username, email, password }) })
 
 export const listCampaigns = () => request('/api/campaigns')
 

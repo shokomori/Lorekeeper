@@ -6,6 +6,15 @@ export async function findUserByEmail(pool, email) {
   return result.rows[0] ?? null
 }
 
+export async function findUserByLogin(pool, identifier) {
+  const normalized = identifier.toLowerCase().trim()
+  const result = await pool.query(
+    'SELECT * FROM users WHERE lower(email) = $1 OR lower(username) = $1 LIMIT 1',
+    [normalized]
+  )
+  return result.rows[0] ?? null
+}
+
 export async function findUserById(pool, id) {
   const result = await pool.query(
     'SELECT * FROM users WHERE id = $1 LIMIT 1',
@@ -27,7 +36,7 @@ export async function updateUserProfile(pool, { userId, name, email }) {
     `UPDATE users
      SET name = $1, email = $2
      WHERE id = $3
-     RETURNING id, name, email`,
+    RETURNING id, name, username, email`,
     [name.trim(), email.trim().toLowerCase(), userId]
   )
   return result.rows[0] ?? null
@@ -43,12 +52,12 @@ export async function listPlaintextUsers(pool) {
   return result.rows
 }
 
-export async function createUser(pool, { name, email, passwordHash }) {
+export async function createUser(pool, { name, username, email, passwordHash }) {
   const result = await pool.query(
-    `INSERT INTO users (name, email, password_hash)
-     VALUES ($1, $2, $3)
-     RETURNING id, name, email, created_at`,
-    [name.trim(), email.toLowerCase().trim(), passwordHash]
+    `INSERT INTO users (name, username, email, password_hash)
+     VALUES ($1, $2, $3, $4)
+    RETURNING id, name, username, email, created_at`,
+      [name.trim(), username ? username.toLowerCase().trim() : null, email.toLowerCase().trim(), passwordHash]
   )
   return result.rows[0]
 }

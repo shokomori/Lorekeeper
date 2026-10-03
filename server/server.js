@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import bcrypt from 'bcryptjs'
@@ -128,6 +129,7 @@ function requireFields(body, fields) {
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const usernamePattern = /^[a-zA-Z0-9_]{3,24}$/
 
 function validateEmail(value) {
   return typeof value === 'string' && emailPattern.test(value.trim())
@@ -150,14 +152,15 @@ function sendInvalidId(response, ...values) {
 
 app.post('/api/auth/register', async (request, response, next) => {
   try {
-    const { name, email, password } = request.body ?? {}
-    const missing = requireFields({ name, email, password }, ['name', 'email', 'password'])
+    const { name, username, email, password } = request.body ?? {}
+    const missing = requireFields({ name, username, email, password }, ['name', 'username', 'email', 'password'])
 
     if (missing.length) {
       return response.status(400).json({ error: `${missing.join(', ')} is required` })
     }
 
     const trimmedName = String(name).trim()
+    const trimmedUsername = String(username).trim().toLowerCase()
     const trimmedEmail = String(email).trim().toLowerCase()
     if (!trimmedName) {
       return response.status(400).json({ error: 'Name is required.' })
@@ -165,42 +168,48 @@ app.post('/api/auth/register', async (request, response, next) => {
     if (!validateEmail(trimmedEmail)) {
       return response.status(400).json({ error: 'Please enter a valid email address.' })
     }
+    if (!usernamePattern.test(trimmedUsername)) {
+      return response.status(400).json({ error: 'Username must be 3-24 characters using letters, numbers, or underscores.' })
+    }
     if (!validatePassword(password)) {
       return response.status(400).json({ error: 'Password must be at least 8 characters long.' })
     }
 
-    const existing = await activeRepo.findUserByEmail(trimmedEmail)
-    if (existing) {
+    if (await activeRepo.findUserByLogin(trimmedEmail)) {
       return response.status(409).json({ error: 'An account with that email already exists.' })
+    }
+    if (await activeRepo.findUserByLogin(trimmedUsername)) {
+      return response.status(409).json({ error: 'That username is already taken.' })
     }
 
     const user = await activeRepo.createUser({
       name: trimmedName,
+      username: trimmedUsername,
       email: trimmedEmail,
       passwordHash: await bcrypt.hash(password, 12),
     })
 
-    response.status(201).json({ token: issueToken(user), user: { id: user.id, name: user.name, email: user.email } })
+    response.status(201).json({ token: issueToken(user), user: { id: user.id, name: user.name, username: user.username, email: user.email } })
   } catch (error) {
+    if (error.code === '23505') {
+      return response.status(409).json({ error: 'That username or email is already in use.' })
+    }
     next(error)
   }
 })
 
 app.post('/api/auth/login', async (request, response, next) => {
   try {
-    const { email, password } = request.body ?? {}
-    const missing = requireFields({ email, password }, ['email', 'password'])
+    const { identifier, email, password } = request.body ?? {}
+    const loginIdentifier = identifier ?? email
+    const missing = requireFields({ identifier: loginIdentifier, password }, ['identifier', 'password'])
 
     if (missing.length) {
       return response.status(400).json({ error: `${missing.join(', ')} is required` })
     }
 
-    const trimmedEmail = String(email).trim().toLowerCase()
-    if (!validateEmail(trimmedEmail)) {
-      return response.status(400).json({ error: 'Please enter a valid email address.' })
-    }
-
-    const user = await activeRepo.findUserByEmail(trimmedEmail)
+    const trimmedIdentifier = String(loginIdentifier).trim().toLowerCase()
+    const user = await activeRepo.findUserByLogin(trimmedIdentifier)
     if (!user) {
       return response.status(401).json({ error: 'Incorrect email or password.' })
     }
@@ -210,7 +219,7 @@ app.post('/api/auth/login', async (request, response, next) => {
     if (!valid) return response.status(401).json({ error: 'Incorrect email or password.' })
     if (!isHash) await activeRepo.updateUserPassword(user.id, await bcrypt.hash(password, 12))
 
-    response.json({ token: issueToken(user), user: { id: user.id, name: user.name, email: user.email } })
+    response.json({ token: issueToken(user), user: { id: user.id, name: user.name, username: user.username, email: user.email } })
   } catch (error) {
     next(error)
   }
@@ -220,7 +229,7 @@ app.get('/api/auth/me', requireAuth, async (request, response, next) => {
   try {
     const user = await activeRepo.findUserById(request.userId)
     if (!user) return response.status(404).json({ error: 'User not found.' })
-    response.json({ user: { id: user.id, name: user.name, email: user.email } })
+    response.json({ user: { id: user.id, name: user.name, username: user.username, email: user.email } })
   } catch (error) {
     next(error)
   }
@@ -238,7 +247,7 @@ app.put('/api/auth/me', requireAuth, async (request, response, next) => {
     const currentUser = await activeRepo.findUserById(request.userId)
     if (!currentUser) return response.status(404).json({ error: 'User not found.' })
 
-    const existing = await activeRepo.findUserByEmail(trimmedEmail)
+    const existing = await activeRepo.findUserByLogin(trimmedEmail)
     if (existing && existing.id !== request.userId) {
       return response.status(409).json({ error: 'An account with that email already exists.' })
     }
@@ -250,7 +259,7 @@ app.put('/api/auth/me', requireAuth, async (request, response, next) => {
     })
     if (!updated) return response.status(404).json({ error: 'User not found.' })
 
-    response.json({ user: { id: updated.id, name: updated.name, email: updated.email } })
+    response.json({ user: { id: updated.id, name: updated.name, username: updated.username, email: updated.email } })
   } catch (error) {
     next(error)
   }

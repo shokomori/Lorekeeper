@@ -9,10 +9,11 @@ function nextId() {
   return idCounter++
 }
 
-export function createUser({ name, email, passwordHash }) {
+export function createUser({ name, username, email, passwordHash }) {
   const user = {
     id: nextId(),
     name,
+    username: String(username || '').toLowerCase().trim() || null,
     email: String(email).toLowerCase().trim(),
     password_hash: passwordHash,
     created_at: new Date().toISOString(),
@@ -24,6 +25,11 @@ export function createUser({ name, email, passwordHash }) {
 export function findUserByEmail(email) {
   const normalized = String(email).toLowerCase().trim()
   return users.find((user) => user.email === normalized) ?? null
+}
+
+export function findUserByLogin(identifier) {
+  const normalized = String(identifier).toLowerCase().trim()
+  return users.find((user) => user.email === normalized || user.username === normalized) ?? null
 }
 
 export function findUserById(id) {

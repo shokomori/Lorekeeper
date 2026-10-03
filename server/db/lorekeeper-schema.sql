@@ -1,11 +1,15 @@
 CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,
   name          TEXT NOT NULL,
+  username      TEXT,
   email         TEXT NOT NULL UNIQUE,
   password_hash TEXT,
   google_id     TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower_idx ON users (lower(username)) WHERE username IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id          SERIAL PRIMARY KEY,
