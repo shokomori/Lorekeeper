@@ -62,8 +62,8 @@ function getExistingWallpaper(key) {
 function Logo({ compact = false }) {
   return (
     <div className={`logo ${compact ? 'logo-compact' : ''}`} aria-label="Lorekeeper">
-      <img className="logo-horizontal" src="/assets/lorekeeper-logo-horizontal.png" alt="Lorekeeper" />
-      <img className="logo-vertical" src="/assets/lorekeeper-logo-vertical.png" alt="Lorekeeper" />
+      <img className="logo-horizontal" src={`${import.meta.env.BASE_URL}assets/lorekeeper-logo-horizontal.png`} alt="Lorekeeper" />
+      <img className="logo-vertical" src={`${import.meta.env.BASE_URL}assets/lorekeeper-logo-vertical.png`} alt="Lorekeeper" />
     </div>
   )
 }
