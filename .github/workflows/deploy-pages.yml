@@ -14,7 +14,7 @@ name: Deploy client to GitHub Pages
 #     VITE_USE_MOCK_API   "false" once your Express API is deployed. Anything
 #                         else, including leaving it unset, keeps the simulated
 #                         backend on, which is the safe default for a template.
-#     VITE_API_BASE_URL   https://your-api.onrender.com   (no trailing slash)
+#     VITE_API_BASE_URL   https://lorekeeper-api-cad9.onrender.com   (no trailing slash)
 #
 # Never put an API key, a password or a database URL in a VITE_ variable. Those
 # belong in your SERVER's environment, and the server is not built here. See

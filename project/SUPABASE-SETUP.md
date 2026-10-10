@@ -1,6 +1,9 @@
-# Supabase setup for Lorekeeper
+# Optional Supabase setup for Lorekeeper
 
-This project is now configured to use Supabase Postgres as the production database target.
+The deployed API is hosted on Render and currently uses PostgreSQL. This guide
+describes how to connect a separate Supabase Postgres project if you choose to
+use Supabase instead. The `YOUR_PROJECT_REF` values below are examples to
+replace with the reference for your own Supabase project.
 
 ## 1) Create the Supabase project
 

@@ -9,6 +9,10 @@ function normalizeApiError(error, fallbackMessage) {
 }
 
 async function request(path, options = {}) {
+  if (!import.meta.env.DEV && !BASE) {
+    throw new Error('The Lorekeeper API is not configured for this deployment. Deploy the Express API, set VITE_API_BASE_URL, and rebuild the site.')
+  }
+
   const token = localStorage.getItem(TOKEN_KEY)
 
   try {
